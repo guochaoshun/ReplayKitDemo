@@ -10,7 +10,6 @@
 
 @interface ViewController ()<RPScreenRecorderDelegate,RPPreviewViewControllerDelegate>
 
-
 @end
 
 @implementation ViewController
@@ -18,11 +17,14 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-
-
 }
 
 - (IBAction)startRecordAction:(UIButton *)sender {
+
+    if ([RPScreenRecorder sharedRecorder].recording==YES) {
+        NSLog(@"正在录制中");
+        return;
+    }
 
     if ([RPScreenRecorder sharedRecorder].isAvailable) {
 
@@ -33,7 +35,7 @@
             if (error) {
                 NSLog(@"录屏初始化失败, %@",error);
                 /*
-                 开发中遇到了一个错误, 低版本的系统解决方案看起来只有重启,可以做个提示给用户
+                 开发中遇到了一个错误, 低版本的系统解决方案看起来只有重启,可以做个提示给用户需要重启设备
                  com.apple.ReplayKit.rprecordingerrodomain代码=-5807 “录制被多任务和内容大小调整中断” UserInfo={NSLocalizedDescription=录制被多任务中断 和内容大小调整})
 
                  我遇到这个问题因为Extension启动失败导致上一个Extension没有关闭没办法重新打开，关机重启手机可以解决，
@@ -55,16 +57,20 @@
     } else {
         NSLog(@"[RPScreenRecorder sharedRecorder].isAvailable不支持录屏");
     }
-
-
 }
 
 - (IBAction)endRecordAction:(UIButton *)sender {
 
+    NSLog(@"点击结束录屏");
     [[RPScreenRecorder sharedRecorder] stopRecordingWithHandler:^(RPPreviewViewController * _Nullable previewViewController, NSError * _Nullable error) {
 
-        previewViewController.previewControllerDelegate = self;
+        if (error) {
+            NSLog(@"真正结束录屏,出错了: %@",error);
+        }
+        NSLog(@"真正结束录屏,显示预览");
+        // 显示预览
         // 录屏结束,调用显示预览,根据自己的需求来处理,也可以不显示预览,直接存相册,让用户到相册里编辑
+        previewViewController.previewControllerDelegate = self;
         [self presentViewController:previewViewController animated:YES completion:^{
 
         }];
@@ -81,27 +87,35 @@
 #pragma mark - 录制事件回调
 // 录屏结束, 显示出预览画面
 - (void)screenRecorder:(RPScreenRecorder *)screenRecorder didStopRecordingWithPreviewViewController:(nullable RPPreviewViewController *)previewViewController error:(nullable NSError *)error {
-
-
-
+    NSLog(@"录屏结束, 显示出预览画面");
 }
 
 // [RPScreenRecorder sharedRecorder].isAvailable, 状态变化会抛这个回调
 - (void)screenRecorderDidChangeAvailability:(RPScreenRecorder *)screenRecorder {
-
+    NSLog(@"[RPScreenRecorder sharedRecorder].isAvailable状态改变, %d",[RPScreenRecorder sharedRecorder].isAvailable);
 }
 
 
 #pragma mark - 预览视图回调
-// 预览视图编辑结束
+// 预览视图编辑结束, 取消/保存
 - (void)previewControllerDidFinish:(RPPreviewViewController *)previewController {
     [previewController dismissViewControllerAnimated:YES completion:^{
 
     }];
 }
 
+// 预览页面点击保存,取消,复制,AirDrop等,会进入此回调,不需要做什么逻辑,只是把事件回调回来
 - (void)previewController:(RPPreviewViewController *)previewController didFinishWithActivityTypes:(NSSet <NSString *> *)activityTypes {
 
+    if ([activityTypes containsObject:@"com.apple.UIKit.activity.SaveToCameraRoll"]) {
+        NSLog(@"保存到系统相册");
+    }
+    if ([activityTypes containsObject:@"com.apple.UIKit.activity.CopyToPasteboard"]) {
+        NSLog(@"复制到粘贴板");
+    }
+    if ([activityTypes containsObject:@"com.apple.UIKit.activity.AirDrop"]) {
+        NSLog(@"AirDrop发送成功");
+    }
 }
 
 
