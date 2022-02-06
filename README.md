@@ -1,2 +1,2 @@
 # ReplayKitDemo
-app内部录屏demo
+app录屏demo
